@@ -204,11 +204,17 @@ L.Edit.PolyVerticesEdit = L.Handler.extend({
 		this._markers = [];
 
 		var latlngs = this._defaultShape(),
-			i, j, len, marker;
+			i, j, len, marker, mkopts;
 
 		for (i = 0, len = latlngs.length; i < len; i++) {
+			mkopts = this._getMarkerOptions({
+				index: i,
+				len: len,
+				latlng: latlngs[i],
+				middleMarker: false,
+			});
 
-			marker = this._createMarker(latlngs[i], i);
+			marker = this._createMarker(latlngs[i], i, mkopts);
 			marker.on('click', this._onMarkerClick, this);
 			marker.on('contextmenu', this._onContextMenu, this);
 			this._markers.push(marker);
@@ -229,12 +235,14 @@ L.Edit.PolyVerticesEdit = L.Handler.extend({
 		}
 	},
 
-	_createMarker: function (latlng, index) {
-		// Extending L.Marker in TouchEvents.js to include touch.
-		var marker = new L.Marker.Touch(latlng, {
+	_createMarker: function (latlng, index, opts) {
+		opts = L.extend({
 			draggable: true,
 			icon: this.options.icon,
-		});
+		}, opts);
+
+		// Extending L.Marker in TouchEvents.js to include touch.
+		var marker = new L.Marker.Touch(latlng, opts);
 
 		marker._origLatLng = latlng;
 		marker._index = index;
@@ -421,7 +429,10 @@ L.Edit.PolyVerticesEdit = L.Handler.extend({
 
 	_createMiddleMarker: function (marker1, marker2) {
 		var latlng = this._getMiddleLatLng(marker1, marker2),
-			marker = this._createMarker(latlng),
+			marker = this._createMarker(latlng, null, this._getMarkerOptions({
+				latlng: latlng,
+				middleMarker: true,
+			})),
 			onClick,
 			onDragStart,
 			onDragEnd;
@@ -494,6 +505,16 @@ L.Edit.PolyVerticesEdit = L.Handler.extend({
 			p2 = map.project(marker2.getLatLng());
 
 		return map.unproject(p1._add(p2)._divideBy(2));
+	},
+
+	_getMarkerOptions: function(data) {
+		var opts = {};
+
+		if (this.options.vertices) {
+			opts = this.options.vertices.call(this, data);
+		}
+
+		return opts;
 	}
 });
 
